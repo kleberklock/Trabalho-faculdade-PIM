@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sistema de Gestão de Chamados</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <h1 class="logo">Sistema de Chamados</h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Login</a></li>
+                    <li><a href="#">Termos de Uso</a></li>
+                    <li><a href="#">Política de Privacidade</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content container">
+        <section class="login-section">
+            <h2 class="section-title">Acesse sua conta</h2>
+            <form class="login-form">
+                <div class="form-group">
+                    <label for="idEmpresarial">ID Empresarial:</label>
+                    <input type="text" id="idEmpresarial" name="idEmpresarial" placeholder="Seu ID de 4 dígitos" maxlength="4" required>
+                </div>
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="password" id="senha" name="senha" placeholder="Sua senha" minlength="5" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Entrar</button>
+                <p class="register-link">
+                    Não tem uma conta? <a href="cadastro.html">Cadastre-se</a>
+                </p>
+            </form>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2025 Sistema de Gestão de Chamados. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        const formLogin = document.querySelector('.login-form');
+
+        formLogin.addEventListener('submit', function(event) {
+            event.preventDefault(); // Impede o envio padrão do formulário
+            
+            const idDigitado = document.getElementById('idEmpresarial').value;
+            const senhaDigitada = document.getElementById('senha').value;
+
+            // ---- CÓDIGO NOVO (Chamando a API C#) ----
+            
+            const dadosLogin = {
+                idEmpresarial: idDigitado,
+                senha: senhaDigitada
+            };
+
+            // URL da sua API C# (agora apontando para a porta correta)
+            const apiUrl = 'http://localhost:5001/api/auth/login';
+
+            // Chama o back-end C#
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosLogin)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Pega a mensagem de erro do back-end (ex: "ID ou Senha incorretos")
+                    return response.json().then(err => { 
+                        // Se a API não mandar uma msg de erro, joga um erro padrão
+                        throw new Error(err.message || 'Erro ao tentar logar.'); 
+                    });
+                }
+                // Se deu tudo certo (status 200), lemos a resposta JSON
+                return response.json();
+            })
+            .then(data => {
+                // Sucesso! 'data' contém a resposta do back-end
+                alert(data.message); 
+                
+                // (Opcional) Salvar dados do usuário logado (ex: nome, cargo)
+                // localStorage.setItem('user_nome', data.nome);
+
+                // Redireciona para o dashboard
+                window.location.href = 'dashboard.html';
+            })
+            .catch(error => {
+                // Falha! (Ex: API retornou 401 ou está fora do ar)
+                console.error('Erro no login:', error);
+                alert(error.message); // Mostra o erro (ex: "ID Empresarial ou Senha incorretos.")
+            });
+        });
+    </script>
+    </body>
+</html>

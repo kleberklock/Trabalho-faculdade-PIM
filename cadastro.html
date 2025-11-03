@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - Sistema de Gestão de Chamados</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <h1 class="logo">Sistema de Chamados</h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="index.html">Login</a></li>
+                    <li><a href="#">Termos de Uso</a></li>
+                    <li><a href="#">Política de Privacidade</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content container">
+        <section class="form-section">
+            <h2 class="section-title">Crie sua Conta</h2>
+            
+            <form action="dashboard.html" method="get">
+                <div class="form-group">
+                    <label for="nome">Nome Completo:</label>
+                    <input type="text" id="nome" name="nome" placeholder="Digite seu nome completo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="idEmpresarial">ID Empresarial:</label>
+                    <input type="text" id="idEmpresarial" name="idEmpresarial" placeholder="Seu ID de 4 dígitos" maxlength="4" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" placeholder="seuemail@empresa.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="senha">Senha:</label>
+                    <input type="password" id="senha" name="senha" placeholder="Mínimo de 5 caracteres" minlength="5" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmarSenha">Confirmar Senha:</label>
+                    <input type="password" id="confirmarSenha" name="confirmarSenha" placeholder="Repita sua senha" minlength="5" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Cadastrar</button>
+
+                <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                    Já tem uma conta? <a href="index.html">Faça login</a>
+                </p>
+            </form>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2025 Sistema de Gestão de Chamados. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+    <script>
+    const formCadastro = document.querySelector('form');
+
+    formCadastro.addEventListener('submit', function(event) {
+        event.preventDefault(); // Impede o envio padrão
+
+        // 1. Pega os dados do formulário
+        const nome = document.getElementById('nome').value;
+        const idEmpresarial = document.getElementById('idEmpresarial').value;
+        const email = document.getElementById('email').value;
+        const senha = document.getElementById('senha').value;
+        const confirmarSenha = document.getElementById('confirmarSenha').value;
+
+        // 2. Validação simples no front-end
+        if (senha !== confirmarSenha) {
+            alert("As senhas não coincidem!");
+            return;
+        }
+
+        // 3. Monta o objeto (DTO) para enviar ao C#
+        const dadosCadastro = {
+            nome: nome,
+            idEmpresarial: idEmpresarial,
+            email: email,
+            senha: senha
+        };
+
+        // 4. Define a URL da API de cadastro
+        const apiUrl = 'http://localhost:5001/api/usuarios/registrar';
+
+        // 5. Chama o back-end C#
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dadosCadastro)
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Se der erro (ex: 400), lê a mensagem de erro da API
+                return response.json().then(err => { 
+                    throw new Error(err.message || 'Erro ao tentar cadastrar.'); 
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Sucesso!
+            alert(data.message); // Ex: "Usuário cadastrado com sucesso!"
+            window.location.href = 'index.html.html'; // Redireciona para o login
+        })
+        .catch(error => {
+            // Falha!
+            console.error('Erro no cadastro:', error);
+            alert(error.message);
+        });
+    });
+</script>
+</body>
+</html>

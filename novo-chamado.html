@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Chamado - Sistema de Gestão de Chamados</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <h1 class="logo">Sistema de Chamados</h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="dashboard.html">Dashboard</a></li>
+                    <li><a href="novo-chamado.html">Novo Chamado</a></li>
+                    <li><a href="meus-chamados.html">Meus Chamados</a></li>
+                    <li><a href="gerenciar-chamados.html">Gerenciar Chamados</a></li>
+                    <li><a href="ia-interface.html">Interface IA</a></li>
+                    <li><a href="consultar-produtos.html">Consultar Produtos</a></li>
+                    <li><a href="index.html">Sair</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content container">
+        <section class="form-section">
+            <h2 class="section-title">Abrir Nova Solicitação de Serviço</h2>
+            <form action="meus-chamados.html" method="get">
+                <div class="form-group">
+                    <label for="assunto">Assunto:</label>
+                    <input type="text" id="assunto" name="assunto" placeholder="Ex: Erro no sistema de estoque" required>
+                </div>
+                <div class="form-group">
+                    <label for="descricao">Descrição Detalhada do Problema:</label>
+                    <textarea id="descricao" name="descricao" rows="6" placeholder="Descreva o problema com o máximo de detalhes possível..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="prioridade">Prioridade:</label>
+                    <select id="prioridade" name="prioridade" required>
+                        <option value="">Selecione a Prioridade</option>
+                        <option value="alta">Alta</option>
+                        <option value="media">Média</option>
+                        <option value="baixa">Baixa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="categoria">Categoria:</label>
+                    <select id="categoria" name="categoria" required>
+                        <option value="">Selecione a Categoria</option>
+                        <option value="rede">Rede</option>
+                        <option value="sistema">Sistema</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="software">Software</option>
+                        <option value="acesso">Acesso</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar Solicitação</button>
+            </form>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="container">
+            <p>&copy; 2025 Sistema de Gestão de Chamados. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+    <script>
+    // 1. Seleciona o formulário
+    const formChamado = document.querySelector('form');
+
+    // 2. Adiciona um "ouvinte" para o evento de 'submit' (envio)
+    formChamado.addEventListener('submit', function(event) {
+        
+        // 3. Impede o comportamento padrão do HTML (que é recarregar a página)
+        event.preventDefault();
+
+        // 4. Pega os dados dos campos do formulário
+        const dadosChamado = {
+            assunto: document.getElementById('assunto').value,
+            descricao: document.getElementById('descricao').value,
+            prioridade: document.getElementById('prioridade').value,
+            categoria: document.getElementById('categoria').value
+        };
+
+        // 5. Define a URL da API de chamados
+        const apiUrl = 'http://localhost:5001/api/chamados';
+
+        // 6. Envia os dados para o back-end C# (POST)
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dadosChamado) // Converte o objeto JS em texto JSON
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Se der erro, tenta ler a mensagem de erro da API
+                return response.json().then(err => { 
+                    throw new Error(err.message || 'Erro ao enviar chamado.'); 
+                });
+            }
+            return response.json(); // Converte a resposta de sucesso
+        })
+        .then(data => {
+            // 7. Sucesso!
+            alert(data.message); // Mostra o alerta "Chamado registrado com sucesso!"
+            
+            // 8. Redireciona o usuário para a página "Meus Chamados"
+            window.location.href = 'meus-chamados.html';
+        })
+        .catch(error => {
+            // 8. Se der erro no 'fetch'
+            console.error('Erro ao criar chamado:', error);
+            alert(`Erro: ${error.message}`);
+        });
+    });
+</script>
+</body>
+</html>
