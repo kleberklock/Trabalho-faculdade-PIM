@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão de Chamados</title>
+    <style>
+        /* =========================================
+           RESET E ESTILOS GERAIS
+           ========================================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6; color: #333; line-height: 1.6; overflow-x: hidden;
+            display: flex; flex-direction: column; min-height: 100vh;
+            padding-bottom: 80px; 
+        }
+        a { color: #007bff; text-decoration: none; transition: color 0.3s ease; cursor: pointer; }
+        a:hover { text-decoration: underline; color: #0056b3; }
+        img { max-width: 100%; display: block; height: auto; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; width: 100%; }
+
+        /* =========================================
+           GERENCIAMENTO DE TELAS (SPA)
+           ========================================= */
+        .view-section { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* =========================================
+           BARRA DE SISTEMA (INFERIOR)
+           ========================================= */
+        .main-header { 
+            background-color: #ffffff; 
+            position: fixed; bottom: 0; left: 0; width: 100%; z-index: 1000;
+            border-top: 1px solid #dee2e6; padding: 0.5rem 0; 
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05); 
+        }
+        .main-header .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .logo { font-size: 1.2rem; font-weight: 700; color: #2c3e50; text-decoration: none; margin-right: 1rem; }
+        .main-nav ul { list-style: none; display: flex; margin: 0; padding: 0; flex-wrap: wrap; justify-content: center; }
+        .main-nav li { margin-left: 1rem; margin-right: 1rem; }
+        .main-nav a { font-weight: 500; color: #495057; padding: 0.5rem; display: inline-block; font-size: 0.9rem; }
+        .main-nav a:hover { color: #007bff; background-color: #f8f9fa; border-radius: 4px; }
+
+        /* =========================================
+           CONTEÚDO PRINCIPAL
+           ========================================= */
+        .main-content { padding-top: 2rem; padding-bottom: 2rem; flex: 1; }
+        .section-title { font-size: 2.25rem; color: #2c3e50; margin-bottom: 2rem; text-align: center; }
+
+        /* =========================================
+           BOTÕES
+           ========================================= */
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 5px; cursor: pointer; text-align: center; text-decoration: none; transition: all 0.3s ease; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        /* =========================================
+           FORMULÁRIOS
+           ========================================= */
+        .login-section, .form-section { max-width: 600px; margin: 1rem auto; background-color: #ffffff; padding: 2.5rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); width: 100%; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.75rem; font-size: 1rem; border: 1px solid #ced4da; border-radius: 4px; font-family: inherit; }
+        .form-group input:disabled { background-color: #e9ecef; cursor: not-allowed; }
+        .login-form .btn, .form-section .btn { width: 100%; }
+
+        /* =========================================
+           TABELAS RESPONSIVAS
+           ========================================= */
+        .responsive-table { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background: #fff; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 1rem; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        table th, table td { padding: 1rem; text-align: left; border-bottom: 1px solid #e9ecef; white-space: nowrap; }
+        table th { background-color: #f8f9fa; }
+        
+        /* Badges */
+        .status-badge { padding: 0.3em 0.75em; font-size: 0.75rem; font-weight: 700; border-radius: 20px; display: inline-block; text-transform: uppercase; }
+        .status-badge.alta, .status-badge.erro, .status-badge.indisponivel { background-color: #fde8e8; color: #c9302c; }
+        .status-badge.media, .status-badge.pendente { background-color: #fff8e1; color: #f0ad4e; }
+        .status-badge.baixa { background-color: #e6f7ff; color: #0056b3; }
+        .status-badge.concluido, .status-badge.em-estoque { background-color: #eaf7eb; color: #4cae4c; }
+        .status-badge.em-andamento { background-color: #e3f2fd; color: #0275d8; }
+
+        /* =========================================
+           CARDS
+           ========================================= */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+        .card { background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .card p { flex-grow: 1; margin-bottom: 1.5rem; }
+
+        /* =========================================
+           CHAT (IA)
+           ========================================= */
+        .chat-container { background-color: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 70vh; min-height: 400px; margin-bottom: 1rem;}
+        .chat-history { flex-grow: 1; padding: 1.5rem; overflow-y: auto; }
+        .chat-input-area { padding: 1.5rem; background: #f8f9fa; border-top: 1px solid #eee; }
+        .ia-input-form { display: flex; gap: 1rem; align-items: center; }
+        .ia-input-form .form-group { margin-bottom: 0; flex-grow: 1; }
+        .chat-message { display: flex; gap: 1rem; margin-bottom: 1rem; }
+        .message-content { background: #f1f3f5; padding: 1rem; border-radius: 8px; word-wrap: break-word; }
+        .user-message { justify-content: flex-end; }
+        .user-message .message-content { background: #e3f2fd; color: #0056b3; }
+        .loading-dots span { animation: blink 1.4s infinite both; font-size: 2rem; line-height: 10px; }
+        .loading-dots span:nth-child(2) { animation-delay: .2s; }
+        .loading-dots span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink { 0% { opacity: .2; } 20% { opacity: 1; } 100% { opacity: .2; } }
+
+        /* =========================================
+           FOOTER
+           ========================================= */
+        .main-footer { 
+            background-color: transparent; color: #6c757d; padding: 1rem 0; 
+            text-align: center; margin-top: auto; margin-bottom: 60px; font-size: 0.85rem;
+        }
+
+        /* =========================================
+           RESPONSIVIDADE
+           ========================================= */
+        @media screen and (max-width: 768px) {
+            .main-header { padding: 0.25rem 0; max-height: 35vh; overflow-y: auto; }
+            .main-header .container { flex-direction: column; text-align: center; }
+            .main-nav ul { flex-direction: row; width: 100%; justify-content: center; padding-bottom: 5px; }
+            .main-nav li { margin: 0.25rem; }
+            .main-nav a { padding: 0.4rem 0.6rem; font-size: 0.8rem; background: #f1f3f5; border-radius: 15px; }
+            .login-section, .form-section { padding: 1.5rem; margin: 1rem auto; width: 100%; box-shadow: none; border: 1px solid #eee; }
+        }
+        @media screen and (max-width: 480px) {
+            .ia-input-form { flex-direction: column; align-items: stretch; }
+            .ia-input-form .btn { width: 100%; margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="main-content container">
+
+        <section id="view-login" class="view-section active">
+            <div class="login-section">
+                <h2 class="section-title">Acesse sua conta</h2>
+                <form id="form-login" class="login-form">
+                    <div class="form-group">
+                        <label for="loginIdEmpresarial">ID Empresarial:</label>
+                        <input type="text" id="loginIdEmpresarial" placeholder="Seu ID de 4 dígitos" maxlength="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginSenha">Senha:</label>
+                        <input type="password" id="loginSenha" placeholder="Sua senha" minlength="5" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                    <p style="text-align: center; margin-top: 1rem;">
+                        Não tem uma conta? <a onclick="navegarPara('cadastro')">Cadastre-se</a>
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-cadastro" class="view-section">
+            <div class="form-section">
+                <h2 class="section-title">Crie sua Conta</h2>
+                <form id="form-cadastro">
+                    <div class="form-group">
+                        <label for="cadNome">Nome Completo:</label>
+                        <input type="text" id="cadNome" placeholder="Digite seu nome completo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadIdEmpresarial">ID Empresarial:</label>
+                        <input type="text" id="cadIdEmpresarial" placeholder="Seu ID de 4 dígitos" maxlength="4" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadEmail">Email:</label>
+                        <input type="email" id="cadEmail" placeholder="seuemail@empresa.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadSenha">Senha:</label>
+                        <input type="password" id="cadSenha" placeholder="Mínimo de 5 caracteres" minlength="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cadConfirmarSenha">Confirmar Senha:</label>
+                        <input type="password" id="cadConfirmarSenha" placeholder="Repita sua senha" minlength="5" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Cadastrar</button>
+                    <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem;">
+                        Já tem uma conta? <a onclick="navegarPara('login')">Faça login</a>
+                    </p>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-dashboard" class="view-section">
+            <h2 class="section-title">Bem-vindo</h2>
+            <p style="text-align: center; max-width: 800px; margin: 0 auto 2rem;">
+                Aqui você encontra as principais funcionalidades do sistema.
+            </p>
+            <section class="card-grid">
+                <div class="card">
+                    <h3>Criar Novo Chamado</h3>
+                    <p>Abra uma solicitação de suporte técnico rapidamente.</p>
+                    <a onclick="navegarPara('novo-chamado')" class="btn btn-primary">Abrir Chamado</a>
+                </div>
+                <div class="card">
+                    <h3>Meus Chamados</h3>
+                    <p>Acompanhe o status das suas solicitações.</p>
+                    <a onclick="navegarPara('meus-chamados')" class="btn btn-secondary">Ver Meus Chamados</a>
+                </div>
+                <div class="card">
+                    <h3>Gerenciar Chamados</h3>
+                    <p>Visualizar e administrar todas as solicitações (para Administradores).</p>
+                    <a onclick="navegarPara('gerenciar-chamados')" class="btn btn-primary">Gerenciar (Admin)</a>
+                </div>
+                <div class="card">
+                    <h3>Consultar Produtos</h3>
+                    <p>Verifique o estoque e detalhes dos produtos.</p>
+                    <a onclick="navegarPara('consultar-produtos')" class="btn btn-secondary">Ver Produtos</a>
+                </div>
+                <div class="card">
+                    <h3>Assistente IA</h3>
+                    <p>Tire dúvidas e obtenha ajuda rápida com a nossa IA.</p>
+                    <a onclick="navegarPara('ia-interface')" class="btn btn-primary">Acessar IA</a>
+                </div>
+            </section>
+        </section>
+
+        <section id="view-novo-chamado" class="view-section">
+            <div class="form-section">
+                <h2 class="section-title">Abrir Nova Solicitação</h2>
+                <form id="form-novo-chamado">
+                    <div class="form-group">
+                        <label for="chamadoAssunto">Assunto:</label>
+                        <input type="text" id="chamadoAssunto" placeholder="Ex: Erro no sistema de estoque" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="chamadoDescricao">Descrição Detalhada:</label>
+                        <textarea id="chamadoDescricao" rows="6" placeholder="Descreva o problema..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="chamadoPrioridade">Prioridade:</label>
+                        <select id="chamadoPrioridade" required>
+                            <option value="">Selecione a Prioridade</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Media">Média</option>
+                            <option value="Baixa">Baixa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="chamadoCategoria">Categoria:</label>
+                        <select id="chamadoCategoria" required>
+                            <option value="rede">Rede</option>
+                            <option value="sistema">Sistema</option>
+                            <option value="hardware">Hardware</option>
+                            <option value="software">Software</option>
+                            <option value="acesso">Acesso</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Enviar Solicitação</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-meus-chamados" class="view-section">
+            <h2 class="section-title">Meus Chamados</h2>
+            <div class="responsive-table">
+                <table id="tabela-meus-chamados">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Assunto</th>
+                            <th>Data Abertura</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-gerenciar-chamados" class="view-section">
+            <h2 class="section-title">Gerenciar Chamados (Admin)</h2>
+            <div class="responsive-table">
+                <table id="tabela-gerenciar-chamados">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Solicitante</th>
+                            <th>Assunto</th>
+                            <th>Data</th>
+                            <th>Prioridade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-detalhes-chamado" class="view-section">
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2 class="section-title" style="margin-bottom: 0; font-size: 1.8rem;">Detalhes / Edição</h2>
+                    <span id="badge-status-detalhe" class="status-badge"></span>
+                </div>
+                
+                <form id="form-editar-chamado">
+                    <input type="hidden" id="detalheId">
+                    
+                    <div class="form-group">
+                        <label for="detalheData">Data de Abertura:</label>
+                        <input type="text" id="detalheData" disabled style="background-color: #e9ecef; cursor: not-allowed;">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="detalheAssunto">Assunto:</label>
+                        <input type="text" id="detalheAssunto" name="assunto" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="detalheDescricao">Descrição:</label>
+                        <textarea id="detalheDescricao" name="descricao" rows="6" required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="detalhePrioridade">Prioridade:</label>
+                            <select id="detalhePrioridade" name="prioridade" required>
+                                <option value="Alta">Alta</option>
+                                <option value="Media">Média</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="detalheStatus">Status:</label>
+                            <select id="detalheStatus" name="status" required>
+                                <option value="Pendente">Pendente</option>
+                                <option value="Em andamento">Em Andamento</option>
+                                <option value="Concluido">Concluído</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="voltarParaLista()">Voltar</button>
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-consultar-produtos" class="view-section">
+            <h2 class="section-title">Produtos e Estoque</h2>
+            <div class="responsive-table">
+                <table id="tabela-produtos">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Preço</th>
+                            <th>Fabricação</th>
+                            <th>Validade</th>
+                            <th>Disponibilidade</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-ia-interface" class="view-section">
+            <h2 class="section-title">Interface de Inteligência Artificial</h2>
+            <div class="chat-container">
+                <div class="chat-history" id="chat-history">
+                    <div class="chat-message ai-message">
+                        <span class="message-icon">🤖</span>
+                        <div class="message-content">
+                            <p>Bem-vindo(a) à sua central de IA. Como posso ajudar hoje?</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <form id="ia-form" class="ia-input-form">
+                        <div class="form-group">
+                            <label for="ia-prompt" style="display: none;">Sua mensagem</label>
+                            <textarea id="ia-prompt" rows="1" placeholder="Digite sua mensagem..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="main-footer">
+        <div class="container"><p>&copy; 2025 Sistema de Gestão de Chamados.</p></div>
+    </footer>
+
+    <header id="header-public" class="main-header view-section active">
+        <div class="container">
+            <h1 class="logo">Sistema de Chamados</h1>
+            <nav class="main-nav">
+                <ul>
+                    <li><a onclick="navegarPara('login')">Login</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <header id="header-private" class="main-header view-section">
+        <div class="container">
+            <a onclick="navegarPara('dashboard')" class="logo">Sistema</a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a onclick="navegarPara('dashboard')">Início</a></li>
+                    <li><a onclick="navegarPara('novo-chamado')">Novo</a></li>
+                    <li><a onclick="navegarPara('meus-chamados')">Meus</a></li>
+                    <li><a onclick="navegarPara('gerenciar-chamados')">Admin</a></li>
+                    <li><a onclick="navegarPara('consultar-produtos')">Prod</a></li>
+                    <li><a onclick="navegarPara('ia-interface')">IA</a></li>
+                    <li><a onclick="logout()" style="color: #dc3545;">Sair</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <script>
+       // ================= CONFIGURAÇÕES API =================
+const BASE_URL = '/api';
+const GEMINI_API_KEY = 'AIzaSyC5Ltmv5GcypcfhDJCT4H4wUIjW37RXuKw'; 
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${GEMINI_API_KEY}`;
+        // ================= SISTEMA DE ROTEAMENTO =================
+        function navegarPara(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+
+            document.getElementById('header-public').classList.remove('active');
+            document.getElementById('header-private').classList.remove('active');
+
+            if (viewName === 'login' || viewName === 'cadastro') {
+                document.getElementById('header-public').classList.add('active');
+            } else {
+                document.getElementById('header-private').classList.add('active');
+                if (viewName === 'meus-chamados') carregarMeusChamados();
+                if (viewName === 'gerenciar-chamados') carregarTodosChamados();
+                if (viewName === 'consultar-produtos') carregarProdutos();
+            }
+            
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function logout() {
+            navegarPara('login');
+        }
+
+        function getBadgeClass(text) {
+            if (!text) return 'baixa';
+            const t = text.toLowerCase();
+            if (t.includes('alta') || t.includes('erro')) return 'alta';
+            if (t.includes('media') || t.includes('pendente')) return 'media';
+            if (t.includes('concluido') || t.includes('estoque')) return 'concluido';
+            if (t.includes('andamento')) return 'em-andamento';
+            return 'baixa';
+        }
+
+        // ================= LOGIN & CADASTRO =================
+        document.getElementById('form-login').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const dados = {
+                idEmpresarial: document.getElementById('loginIdEmpresarial').value,
+                senha: document.getElementById('loginSenha').value
+            };
+            fetch(`${BASE_URL}/auth/login`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dados)
+            }).then(res => {
+                if(!res.ok) { alert('Login falhou.'); return; }
+                return res.json();
+            }).then(data => {
+                if(data) navegarPara('dashboard');
+            });
+        });
+
+        document.getElementById('form-cadastro').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Lógica simplificada de cadastro (envia ok)
+            alert("Cadastro realizado com sucesso (Simulado)!");
+            navegarPara('login');
+        });
+
+        // ================= OPERAÇÕES DE CHAMADOS =================
+        document.getElementById('form-novo-chamado').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const dados = {
+                assunto: document.getElementById('chamadoAssunto').value,
+                descricao: document.getElementById('chamadoDescricao').value,
+                prioridade: document.getElementById('chamadoPrioridade').value,
+                categoria: document.getElementById('chamadoCategoria').value
+            };
+            fetch(`${BASE_URL}/chamados`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(dados)
+            }).then(res => {
+                if(res.ok) {
+                    alert("Chamado criado!");
+                    document.getElementById('form-novo-chamado').reset();
+                    navegarPara('meus-chamados');
+                } else {
+                    alert("Erro ao criar chamado.");
+                }
+            });
+        });
+
+        // --- LISTAGEM (COM BOTÃO DE VER/EDITAR) ---
+        function carregarMeusChamados() {
+            const tbody = document.querySelector('#tabela-meus-chamados tbody');
+            tbody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+            fetch(`${BASE_URL}/chamados`).then(res => res.json()).then(lista => {
+                tbody.innerHTML = '';
+                if(lista.length === 0) { tbody.innerHTML = '<tr><td colspan="6">Nenhum chamado.</td></tr>'; return; }
+                lista.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.idSolicitacao}</td>
+                        <td>${c.assunto}</td>
+                        <td>${new Date(c.dataSolicitacao).toLocaleDateString()}</td>
+                        <td><span class="status-badge ${getBadgeClass(c.prioridade)}">${c.prioridade}</span></td>
+                        <td><span class="status-badge ${getBadgeClass(c.status)}">${c.status}</span></td>
+                        <td><a onclick="abrirDetalhes(${c.idSolicitacao}, 'meus-chamados')" style="cursor:pointer">Ver / Editar</a></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }).catch(() => tbody.innerHTML = '<tr><td colspan="6">Erro ao carregar.</td></tr>');
+        }
+
+        function carregarTodosChamados() {
+            const tbody = document.querySelector('#tabela-gerenciar-chamados tbody');
+            tbody.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
+            fetch(`${BASE_URL}/chamados`).then(res => res.json()).then(lista => {
+                tbody.innerHTML = '';
+                if(lista.length === 0) { tbody.innerHTML = '<tr><td colspan="7">Nenhum chamado.</td></tr>'; return; }
+                lista.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${c.idSolicitacao}</td>
+                        <td>${c.solicitanteNome || 'User'}</td>
+                        <td>${c.assunto}</td>
+                        <td>${new Date(c.dataSolicitacao).toLocaleDateString()}</td>
+                        <td><span class="status-badge ${getBadgeClass(c.prioridade)}">${c.prioridade}</span></td>
+                        <td><span class="status-badge ${getBadgeClass(c.status)}">${c.status}</span></td>
+                        <td><a onclick="abrirDetalhes(${c.idSolicitacao}, 'gerenciar-chamados')" style="cursor:pointer; font-weight:bold">Gerenciar</a></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }).catch(() => tbody.innerHTML = '<tr><td colspan="7">Erro ao carregar.</td></tr>');
+        }
+
+        // --- DETALHES E EDIÇÃO (LÓGICA NOVA) ---
+        let origemNavegacao = 'meus-chamados';
+
+        function abrirDetalhes(id, origem) {
+            origemNavegacao = origem;
+            navegarPara('detalhes-chamado');
+            
+            // Busca os dados do chamado específico
+            fetch(`${BASE_URL}/chamados/${id}`)
+                .then(res => res.json())
+                .then(c => {
+                    document.getElementById('detalheId').value = c.idSolicitacao;
+                    document.getElementById('detalheData').value = new Date(c.dataSolicitacao).toLocaleString();
+                    document.getElementById('detalheAssunto').value = c.assunto;
+                    document.getElementById('detalheDescricao').value = c.descricao || '';
+                    document.getElementById('detalhePrioridade').value = c.prioridade; 
+                    document.getElementById('detalheStatus').value = c.status; 
+
+                    const badge = document.getElementById('badge-status-detalhe');
+                    badge.className = `status-badge ${getBadgeClass(c.status)}`;
+                    badge.innerText = c.status;
+                })
+                .catch(err => {
+                    alert("Erro ao carregar detalhes.");
+                    voltarParaLista();
+                });
+        }
+
+        function voltarParaLista() {
+            navegarPara(origemNavegacao);
+        }
+
+        document.getElementById('form-editar-chamado').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('detalheId').value;
+            const dados = {
+                assunto: document.getElementById('detalheAssunto').value,
+                descricao: document.getElementById('detalheDescricao').value,
+                prioridade: document.getElementById('detalhePrioridade').value,
+                status: document.getElementById('detalheStatus').value
+            };
+
+            fetch(`${BASE_URL}/chamados/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            }).then(res => {
+                if(res.ok) {
+                    alert("Atualizado com sucesso!");
+                    voltarParaLista();
+                } else {
+                    alert("Erro ao atualizar.");
+                }
+            });
+        });
+
+        // ================= PRODUTOS =================
+        function carregarProdutos() {
+            const tbody = document.querySelector('#tabela-produtos tbody');
+            tbody.innerHTML = '<tr><td colspan="6">Carregando...</td></tr>';
+            fetch(`${BASE_URL}/produtos`).then(res => res.json()).then(lista => {
+                tbody.innerHTML = '';
+                if(lista.length === 0) { tbody.innerHTML = '<tr><td colspan="6">Sem produtos.</td></tr>'; return; }
+                lista.forEach(p => {
+                    const tr = document.createElement('tr');
+                    const status = p.disponivel ? '<span class="status-badge concluido">Em Estoque</span>' : '<span class="status-badge erro">Indisponível</span>';
+                    tr.innerHTML = `
+                        <td>PROD${p.idProduto}</td>
+                        <td>${p.nomeProduto}</td>
+                        <td>R$ ${p.precoProduto}</td>
+                        <td>${new Date(p.dataFabricacao).toLocaleDateString()}</td>
+                        <td>${new Date(p.validade).getFullYear() > 9000 ? 'Indet.' : new Date(p.validade).toLocaleDateString()}</td>
+                        <td>${status}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // ================= IA (GEMINI) =================
+        const chatHistory = document.getElementById('chat-history');
+        const iaInputForm = document.getElementById('ia-form');
+        const promptInput = document.getElementById('ia-prompt');
+
+        function addMessage(text, sender) {
+            const div = document.createElement('div');
+            div.className = `chat-message ${sender}-message`;
+            const icon = sender === 'ai' ? '🤖' : '👤';
+            let cleanText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            if(sender === 'ai') cleanText = cleanText.replace(/\n/g, "<br>");
+            div.innerHTML = `<span class="message-icon">${icon}</span><div class="message-content">${sender === 'ai' ? cleanText : '<p>'+cleanText+'</p>'}</div>`;
+            chatHistory.appendChild(div);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            return div.querySelector('.message-content');
+        }
+
+        iaInputForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const userText = promptInput.value.trim();
+            if (!userText) return;
+
+            addMessage(userText, 'user');
+            promptInput.value = '';
+            const loadingDiv = addMessage('...', 'ai');
+            loadingDiv.innerHTML = '<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>';
+
+            try {
+                const res = await fetch(GEMINI_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: userText }] }] })
+                });
+                if (!res.ok) throw new Error(`Erro API`);
+                const data = await res.json();
+                if (data.candidates && data.candidates[0].content) {
+                    loadingDiv.innerHTML = data.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
+                } else {
+                    throw new Error("Sem resposta.");
+                }
+            } catch (err) {
+                loadingDiv.innerHTML = `<p style="color:red">Erro ou falta API Key.</p>`;
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        });
+
+        // Init
+        navegarPara('login');
+    </script>
+</body>
+</html>
